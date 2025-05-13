@@ -1,0 +1,170 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Landing Page News API Documentation",
+        "description": "API endpoints for the News section of the landing page",
+        "contact": {
+            "email": "your-email@example.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://my-default-host.com",
+            "description": "Landing Page API Server"
+        }
+    ],
+    "paths": {
+        "/api/news/{page}/{limit}": {
+            "get": {
+                "tags": [
+                    "News"
+                ],
+                "summary": "Получить список новостей с пагинацией",
+                "description": "Возвращает список новостей по указанной странице и лимиту. Сортировка по дате создания (новые сверху).",
+                "operationId": "getNewsList",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "path",
+                        "description": "Номер страницы (начиная с 1)",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "path",
+                        "description": "Количество новостей на странице (для лендинга обычно 4). Максимум 100.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "default": 4,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешный ответ со списком новостей и метаданными пагинации",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/News"
+                                            }
+                                        },
+                                        "links": {
+                                            "description": "Pagination links",
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "description": "Pagination metadata",
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса (например, limit не число или вне диапазона)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Invalid pagination parameters"
+                                        },
+                                        "errors": {
+                                            "description": "Details of validation errors",
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "News": {
+                "title": "News",
+                "description": "News object structure",
+                "properties": {
+                    "id": {
+                        "description": "ID новости",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "description": "Заголовок новости",
+                        "type": "string",
+                        "example": "Название новости"
+                    },
+                    "short_description": {
+                        "description": "Краткое описание новости",
+                        "type": "string",
+                        "example": "Короткий текст новости..."
+                    },
+                    "link": {
+                        "description": "Ссылка на источник новости",
+                        "type": "string",
+                        "format": "url",
+                        "example": "https://example.com/source/news/1"
+                    },
+                    "image_url": {
+                        "description": "URL изображения новости",
+                        "type": "string",
+                        "format": "url",
+                        "example": "https://your-domain.com/storage/news_images/image.jpg"
+                    },
+                    "created_at": {
+                        "description": "Дата и время создания новости",
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-10-27 14:30:00"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "responses": {
+            "500": {
+                "description": "Внутренняя ошибка сервера",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "An error occurred while fetching news."
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "News",
+            "description": "API Endpoints of News"
+        }
+    ]
+}
