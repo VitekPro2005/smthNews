@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\MoonShine\Resources;
 
+use App\Services\NewsImageService;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\News;
 
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use MoonShine\Laravel\Resources\ModelResource;
 use MoonShine\Support\Attributes\Icon;
 use MoonShine\UI\Components\Layout\Box;
@@ -16,9 +17,11 @@ use MoonShine\UI\Fields\ID;
 use MoonShine\Contracts\UI\FieldContract;
 use MoonShine\Contracts\UI\ComponentContract;
 use MoonShine\UI\Fields\Image;
+use MoonShine\UI\Fields\Preview;
 use MoonShine\UI\Fields\Text;
 use MoonShine\UI\Fields\Textarea;
 use MoonShine\UI\Fields\Url;
+
 
 #[Icon('newspaper')]
 
@@ -58,7 +61,7 @@ class NewsResource extends ModelResource
                 Text::make('Заголовок', 'title')->required(),
                 Textarea::make('Содержание', 'short_description')->required(),
                 Url::make('Ссылка на источник', 'link')->required(),
-                Image::make('Изображение', 'image')->disk('public')->dir('news_images')->required(),
+                Image::make('Изображение', 'image')->disk('public')->dir('news_images')->nullable()
             ])
         ];
     }
@@ -91,13 +94,64 @@ class NewsResource extends ModelResource
             'title' => 'required|string|max:255',
             'short_description' => 'required|string',
             'link' => 'required|url|max:255',
-            'image' => 'required|image|max:2048',
+            'image' => 'nullable|image|max:2048',
         ];
     }
 
     protected function afterCreated(mixed $item): mixed
     {
+        $this->fetchAndSaveImage($item);
+
         $this->cleanupNews();
+
+        return null;
+    }
+
+    protected function afterUpdated(mixed $item): mixed
+    {
+        $this->fetchAndSaveImage($item);
+
+        return null;
+    }
+    private function fetchAndSaveImage(Model $item): void
+    {
+        $currentLink = $item->link;
+        $originalLink = $item->getOriginal('link');
+
+        $linkChangedInRequest = $currentLink !== $originalLink;
+
+        $conditionMetToFetch = $linkChangedInRequest || ($item->link && empty($item->image));
+
+
+        if ($conditionMetToFetch) {
+
+            $service = new NewsImageService();
+            $newImagePath = $service->fetchImage($currentLink);
+
+            if ($newImagePath) {
+                $oldImagePath = $item->getOriginal('image');
+
+                if ($oldImagePath && $oldImagePath !== $newImagePath && Storage::disk('public')->exists($oldImagePath)) {
+                    Storage::disk('public')->delete($oldImagePath);
+                } else if ($oldImagePath && $oldImagePath === $newImagePath) {
+                    return;
+                }
+
+                $item->image = $newImagePath;
+                if ($item->isDirty('image')) {
+                    $item->save();
+                }
+            }
+        }
+    }
+    protected function beforeDeleting(mixed $item): mixed
+    {
+        if ($item instanceof Model) {
+            if ($item->image && Storage::disk('public')->exists($item->image)) {
+                Storage::disk('public')->delete($item->image);
+            }
+        }
+
         return null;
     }
 
@@ -110,8 +164,8 @@ class NewsResource extends ModelResource
             $itemsToDelete = $newsCount - $threshold;
 
             $oldestNews = News::orderBy('created_at', 'asc')
-            ->take($itemsToDelete)
-            ->get();
+                ->take($itemsToDelete)
+                ->get();
 
             foreach ($oldestNews as $news) {
                 $news->delete();

@@ -7,37 +7,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\NewsApiResource;
 use App\Models\News;
-use Exception;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
-use OpenApi\Annotations as OA;
-
-/**
- * @OA\Info(
- * version="1.0.0",
- * title="Landing Page News API Documentation",
- * description="API endpoints for the News section of the landing page",
- * @OA\Contact(
- * email="your-email@example.com"
- * )
- * )
- *
- * @OA\Server(
- * url=L5_SWAGGER_CONST_HOST,
- * description="Landing Page API Server"
- * )
- *
- * @OA\Tag(
- * name="News",
- * description="API Endpoints of News"
- * )
- */
 class NewsApiController extends Controller
 {
     /**
      * @OA\Get(
-     * path="/api/news/{page}/{limit}",
+     * path="/news/{page}/{limit}",
      * operationId="getNewsList",
      * tags={"News"},
      * summary="Получить список новостей с пагинацией",
@@ -89,54 +63,20 @@ class NewsApiController extends Controller
      * ),
      * @OA\Response(
      * response=400,
-     * description="Неверные параметры запроса (например, limit не число или вне диапазона)",
-     * @OA\JsonContent(
-     * @OA\Property(property="message", type="string", example="Invalid pagination parameters"),
-     * @OA\Property(property="errors", type="object", description="Details of validation errors")
-     * )
-     * )
+     * description="Неверные параметры запроса"
      * ),
      * @OA\Response(
      * response=500,
-     * description="Внутренняя ошибка сервера",
-     * @OA\JsonContent(
-     * @OA\Property(property="message", type="string", example="An error occurred while fetching news.")
-     * )
+     * description="Внутренняя ошибка сервера"
      * )
      * )
      */
-    public function index($page, $limit)
+
+    public function index(int $page, int $limit)
     {
-        $validator = Validator::make([
-            'page' => $page,
-            'limit' => $limit,
-        ], [
-            'page' => 'required|integer|min:1',
-            'limit' => 'required|integer|min:1|max:100',
-        ]);
+        $news = News::orderBy('created_at', 'desc')
+            ->paginate($limit, ['*'], 'page', $page);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Invalid pagination parameters',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
-
-        $page = (int)$page;
-        $limit = (int)$limit;
-
-        try {
-            $news = News::orderBy('created_at', 'desc')
-                ->paginate($limit, ['*'], 'page', $page);
-
-            return NewsApiResource::collection($news);
-        } catch (Exception $e) {
-
-            Log::error('Error fetching news: ' . $e->getMessage());
-
-            return response()->json([
-                'message' => 'An error occurred while fetching news.',
-            ], 500);
-        }
+        return NewsApiResource::collection($news);
     }
 }

@@ -1,8 +1,8 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "Landing Page News API Documentation",
-        "description": "API endpoints for the News section of the landing page",
+        "title": "Landing Page API Documentation",
+        "description": "API endpoints for the Landing Page project",
         "contact": {
             "email": "your-email@example.com"
         },
@@ -15,7 +15,7 @@
         }
     ],
     "paths": {
-        "/api/news/{page}/{limit}": {
+        "/news/{page}/{limit}": {
             "get": {
                 "tags": [
                     "News"
@@ -76,24 +76,10 @@
                         }
                     },
                     "400": {
-                        "description": "Неверные параметры запроса (например, limit не число или вне диапазона)",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Invalid pagination parameters"
-                                        },
-                                        "errors": {
-                                            "description": "Details of validation errors",
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Неверные параметры запроса"
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера"
                     }
                 }
             }
@@ -140,24 +126,6 @@
                     }
                 },
                 "type": "object"
-            }
-        },
-        "responses": {
-            "500": {
-                "description": "Внутренняя ошибка сервера",
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "properties": {
-                                "message": {
-                                    "type": "string",
-                                    "example": "An error occurred while fetching news."
-                                }
-                            },
-                            "type": "object"
-                        }
-                    }
-                }
             }
         }
     },
