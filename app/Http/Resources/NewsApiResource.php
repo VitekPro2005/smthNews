@@ -72,7 +72,7 @@ class NewsApiResource extends JsonResource
             'title' => $this->title,
             'short_description' => $this->short_description,
             'link' => $this->link,
-            'image_url' => $imageUrl,
+            'image_url' => optional($imageUrl),
             'created_at' => $this->created_at->format('Y-m-d H:i:s')
         ];
     }

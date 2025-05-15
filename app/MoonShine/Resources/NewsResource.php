@@ -21,6 +21,7 @@ use MoonShine\UI\Fields\Preview;
 use MoonShine\UI\Fields\Text;
 use MoonShine\UI\Fields\Textarea;
 use MoonShine\UI\Fields\Url;
+use Illuminate\Support\Facades\Log;
 
 
 #[Icon('newspaper')]
@@ -61,7 +62,9 @@ class NewsResource extends ModelResource
                 Text::make('Заголовок', 'title')->required(),
                 Textarea::make('Содержание', 'short_description')->required(),
                 Url::make('Ссылка на источник', 'link')->required(),
-                Image::make('Изображение', 'image')->disk('public')->dir('news_images')->nullable()
+
+                Preview::make('Предпросмотр изображения', 'image')
+                    ->image()
             ])
         ];
     }
@@ -146,10 +149,25 @@ class NewsResource extends ModelResource
     }
     protected function beforeDeleting(mixed $item): mixed
     {
-        if ($item instanceof Model) {
-            if ($item->image && Storage::disk('public')->exists($item->image)) {
-                Storage::disk('public')->delete($item->image);
+        try {
+            Log::info('NewsResource: beforeDeleting hook triggered for item ID: ' . ($item->id ?? 'N/A'));
+
+            if (!empty($item->image)) {
+                $imagePath = str_starts_with($item->image, 'news_images/')
+                    ? $item->image
+                    : 'news_images/' . $item->image;
+
+                if (Storage::disk('public')->exists($imagePath)) {
+                    Storage::disk('public')->delete($imagePath);
+                    Log::info('NewsResource: Deleted image file: ' . $imagePath);
+                } else {
+                    Log::info('NewsResource: Image file not found for deletion: ' . $imagePath);
+                }
+            } else {
+                Log::info('NewsResource: No image to delete');
             }
+        } catch (\Throwable $e) {
+            Log::error('NewsResource: Error in beforeDeleting: ' . $e->getMessage());
         }
 
         return null;
@@ -167,9 +185,16 @@ class NewsResource extends ModelResource
                 ->take($itemsToDelete)
                 ->get();
 
-            foreach ($oldestNews as $news) {
-                $news->delete();
-            }
+            $ids = $oldestNews->pluck('id')->implode(', ');
+            Log::info('NewsResource: cleanupNews triggered. Deleting IDs: ' . $ids);
+
+            $oldestNews->each(function (News $news) {
+                if ($news) {
+                    $news->delete();
+                }
+            });
+        } else {
+            Log::info('NewsResource: cleanupNews triggered. No items to delete.');
         }
     }
 }
