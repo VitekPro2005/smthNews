@@ -147,30 +147,22 @@ class NewsResource extends ModelResource
             }
         }
     }
-    protected function beforeDeleting(mixed $item): mixed
+    protected function beforeDeleting(Mixed $item): mixed
     {
-        try {
-            Log::info('NewsResource: beforeDeleting hook triggered for item ID: ' . ($item->id ?? 'N/A'));
+        Log::info('NewsResource: beforeDeleting hook triggered for item ID: ' . $item->id);
+        Log::info('NewsResource: Image path from model for ID ' . $item->id . ': ' . ($item->image ?? 'null'));
 
-            if (!empty($item->image)) {
-                $imagePath = str_starts_with($item->image, 'news_images/')
-                    ? $item->image
-                    : 'news_images/' . $item->image;
-
-                if (Storage::disk('public')->exists($imagePath)) {
-                    Storage::disk('public')->delete($imagePath);
-                    Log::info('NewsResource: Deleted image file: ' . $imagePath);
-                } else {
-                    Log::info('NewsResource: Image file not found for deletion: ' . $imagePath);
-                }
-            } else {
-                Log::info('NewsResource: No image to delete');
-            }
-        } catch (\Throwable $e) {
-            Log::error('NewsResource: Error in beforeDeleting: ' . $e->getMessage());
+        // ЭТА СТРОКА ПРОВЕРЯЕТ, СУЩЕСТВУЕТ ЛИ ПУТЬ К ИЗОБРАЖЕНИЮ В БАЗЕ ДАННЫХ ($item->image)
+        // И СУЩЕСТВУЕТ ЛИ ФАЙЛ НА ДИСКЕ
+        if ($item->image && Storage::disk('public')->exists($item->image)) {
+            Log::info('NewsResource: Deleting image file: ' . $item->image);
+            Storage::disk('public')->delete($item->image); // Удаление файла происходит ТОЛЬКО здесь
+        } else {
+            // Этот блок выполняется, если у новости НЕТ пути к изображению в БД ИЛИ файла нет на диске
+            Log::info('NewsResource: Condition to delete image file was false for item ID: ' . $item->id);
         }
 
-        return null;
+        return null; // Хук возвращает null, позволяя процессу удаления новости продолжить
     }
 
     private function cleanupNews(): void
